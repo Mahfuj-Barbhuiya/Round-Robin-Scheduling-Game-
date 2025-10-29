@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✦ Round Robin Scheduler: Real-Time Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+    /* -------------------------------------- */
+    /* 1. Global & Variables (Premium Dark)   */
+    /* -------------------------------------- */
+    :root {
+        --color-bg-deep: #0a0a0f; /* Deepest black/navy background */
+        --color-surface: #171721; /* Main panel surface */
+        --color-text-primary: #e3e6e8;
+        --color-text-secondary: #a0a8b4;
+        --color-accent-purple: #8e24aa; /* Primary Accent (Deep Purple) */
+        --color-accent-cyan: #00bcd4; /* Secondary Accent (Highlight) */
+        --color-status-running: #ff9800; /* Amber for Running */
+        --color-status-completed: #43a047; /* Professional Green */
+        --font-header: 'Montserrat', sans-serif;
+        --font-mono: 'Fira Code', monospace;
+        --border-radius-lg: 14px;
+        --border-radius-sm: 8px;
+    }
+
+    body {
+        background-color: var(--color-bg-deep);
+        font-family: var(--font-header);
+        color: var(--color-text-primary);
+        text-align: center;
+        padding: 0;
+        margin: 0;
+        min-height: 100vh;
+        /* Subtle Body Gradient */
+        background-image: radial-gradient(circle at top, rgba(138, 43, 226, 0.05), transparent 40%);
+    }
+
+    /* App Frame */
+    .app-container {
+        max-width: 1300px;
+        margin: 40px auto;
+        padding: 40px;
+        background-color: var(--color-surface);
+        border-radius: var(--border-radius-lg);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+        border-top: 3px solid var(--color-accent-purple); 
+        /* Faint gradient on the surface itself */
+        background-image: linear-gradient(135deg, #171721, #1a1a25);
+    }
+
+    h1 {
+        font-family: var(--font-header);
+        color: var(--color-accent-cyan);
+        font-weight: 800;
+        font-size: 2.8em;
+        margin-bottom: 30px;
+        letter-spacing: 3px;
+        text-shadow: 0 0 15px rgba(0, 188, 212, 0.6);
+    }
+    h2 {
+        font-family: var(--font-header);
+        font-weight: 600;
+        font-size: 1.5em;
+        color: var(--color-text-primary);
+        text-align: left;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #2f2f3a;
+        margin-top: 30px;
+        margin-bottom: 15px;
+    }
+    
+    /* -------------------------------------- */
+    /* 2. Controls & Inputs (Refined)         */
+    /* -------------------------------------- */
+    .control-panel {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px 40px;
+        margin-bottom: 40px;
+        padding: 20px 0;
+        border-bottom: 1px dashed #2f2f3a;
+    }
+    .input-group { display: flex; flex-direction: column; align-items: flex-start; }
+    label { 
+        color: var(--color-text-secondary); font-size: 0.9em; margin-bottom: 6px; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    input { 
+        padding: 12px 15px; border-radius: var(--border-radius-sm); border: none; 
+        font-size: 1em; font-family: var(--font-mono); background: #23232e; 
+        color: var(--color-accent-cyan); transition: box-shadow 0.3s; min-width: 180px;
+    }
+    input:focus { outline: none; box-shadow: 0 0 0 3px var(--color-accent-purple); background: #2f2f3a; }
+    button {
+        background: linear-gradient(45deg, var(--color-accent-purple), #c069d6); 
+        color: var(--color-text-primary); padding: 12px 30px; border-radius: var(--border-radius-sm); 
+        border: none; font-size: 1em; font-weight: 700; cursor: pointer; 
+        transition: transform 0.2s, box-shadow 0.3s, background 0.3s; 
+        text-transform: uppercase; letter-spacing: 1px;
+        box-shadow: 0 4px 12px rgba(142, 36, 170, 0.5);
+    }
+    button:hover { 
+        transform: translateY(-2px); 
+        box-shadow: 0 8px 20px rgba(142, 36, 170, 0.7);
+        background: linear-gradient(45deg, #a03cc0, #d384e8); 
+    }
+
+    /* -------------------------------------- */
+    /* 3. Main Simulation Layout (2-Column)   */
+    /* -------------------------------------- */
+    .main-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr; 
+        gap: 30px;
+    }
+
+    /* Process Cards Area (Left Column) */
+    #processCards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        padding: 15px;
+        background: #1e1e28;
+        border-radius: var(--border-radius-lg);
+        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+    }
+    .process-card {
+        background: #23232e;
+        padding: 18px;
+        border-radius: var(--border-radius-sm);
+        width: 190px;
+        border: 1px solid #2f2f3a;
+        text-align: left;
+        transition: all 0.3s;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        cursor: default;
+    }
+    .process-card:hover {
+        border-color: var(--color-accent-cyan);
+        transform: translateY(-2px);
+    }
+    .p-id { 
+        font-family: var(--font-mono); font-size: 1.8em; font-weight: 700; 
+        color: var(--color-accent-cyan); margin-bottom: 8px;
+    }
+    .p-metric { display: flex; justify-content: space-between; font-size: 0.85em; color: var(--color-text-secondary); }
+    .p-metric span { font-weight: 600; color: var(--color-text-primary); }
+
+    /* Status Styles */
+    .running { border-color: var(--color-status-running); background: #2f271f; box-shadow: 0 0 20px rgba(255, 152, 0, 0.6); }
+    .running .p-id { color: var(--color-status-running); }
+    .completed { border-color: var(--color-status-completed); background: #1f2f1f; }
+    .completed .p-id { color: var(--color-status-completed); }
+    .completed .p-metric span { color: var(--color-status-completed); }
+
+    /* Ready Queue & Real-Time Stats (Right Column) */
+    #sidebar { display: flex; flex-direction: column; gap: 30px; }
+    #readyQueue {
+        background: #23232e;
+        padding: 20px;
+        border-radius: var(--border-radius-lg);
+        min-height: 180px;
+        box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
+    }
+    #queueList { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+    .queue-item {
+        background: var(--color-accent-purple);
+        color: var(--color-text-primary);
+        padding: 8px 14px;
+        border-radius: 20px; /* Pill shape for queue items */
+        font-weight: 700;
+        font-size: 0.9em;
+        font-family: var(--font-mono);
+        border: 1px solid #a0a8b420;
+    }
+    .queue-item:first-child {
+        border: 3px solid var(--color-status-running);
+        box-shadow: 0 0 8px rgba(255, 152, 0, 0.6);
+        background: #a03cc0;
+    }
+
+    /* Real-Time Stats (Highly Visual) */
+    #realTimeStats {
+        background: linear-gradient(135deg, #23232e, #171721);
+        padding: 25px;
+        border-radius: var(--border-radius-lg);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 25px;
+    }
+    #realTimeStats > div {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 0;
+        border-left: 3px solid var(--color-accent-cyan);
+        padding-left: 15px;
+    }
+    #realTimeStats span {
+        font-size: 2em;
+        font-weight: 800;
+        color: var(--color-accent-cyan);
+        font-family: var(--font-mono);
+    }
+    #realTimeStats small {
+        color: var(--color-text-secondary);
+        margin-top: 5px;
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* -------------------------------------- */
+    /* 5. Gantt Chart (Centerpiece)           */
+    /* -------------------------------------- */
+    #ganttChart {
+        width: 100%;
+        overflow-x: auto;
+        padding: 20px 0 50px 0; 
+        margin-top: 20px;
+    }
+    #ganttTimeline {
+        display: flex;
+        height: 70px;
+        min-width: 100%;
+        position: relative;
+        background: #23232e;
+        border-radius: var(--border-radius-sm);
+        border: 2px solid #2f2f3a;
+    }
+    .gantt-block {
+        height: 100%;
+        color: var(--color-text-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1em;
+        font-family: var(--font-mono);
+        position: relative;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.4) inset;
+    }
+    .gantt-time {
+        position: absolute;
+        top: 80px; 
+        transform: translateX(50%);
+        font-size: 0.9em;
+        color: var(--color-text-secondary);
+        border-left: 2px solid var(--color-text-secondary); 
+        padding-left: 5px;
+        line-height: 1;
+        font-family: var(--font-mono);
+    }
+    .gantt-time.start { 
+        left: -1px; 
+        transform: translateX(-50%);
+    }
+
+    /* Gantt block colors (Randomized, but consistent for each process) */
+    .P1 { background-color: #6a1b9a; } 
+    .P2 { background-color: #00838f; } 
+    .P3 { background-color: #ef6c00; } 
+    .P4 { background-color: #4527a0; } 
+    .P5 { background-color: #d81b60; } 
+    .P6 { background-color: #1e88e5; } 
+    .P7 { background-color: #4db6ac; } 
+    .P8 { background-color: #558b2f; } 
+    .P9 { background-color: #795548; }
+    .P10 { background-color: #607d8b; }
+
+    /* -------------------------------------- */
+    /* 6. Log Console & Final Results         */
+    /* -------------------------------------- */
+    #log {
+        text-align: left;
+        background: #000000;
+        color: #fff;
+        border-radius: var(--border-radius-sm);
+        padding: 15px;
+        min-height: 150px;
+        max-height: 250px;
+        overflow-y: auto;
+        font-family: var(--font-mono);
+        font-size: 0.9em;
+        line-height: 1.5;
+        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.7);
+    }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #2f2f3a; padding: 14px; text-align: center; font-size: 0.9em; }
+    th { background: var(--color-accent-purple); color: var(--color-text-primary); font-weight: 700; text-transform: uppercase; }
+    tr:nth-child(even) { background-color: #1a1a24; }
+    .summary h3 { color: var(--color-accent-cyan); font-size: 1.2em; margin: 20px 0 5px 0; font-weight: 600; }
+    .summary span { font-weight: 800; color: var(--color-text-primary); }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+    <h1>ROUND ROBIN SCHEDULER: REAL-TIME SIMULATION</h1>
+
+    <div class="control-panel">
+        <div class="input-group">
+            <label for="num">Processes Count</label>
+            <input type="number" id="num" min="1" max="10" value="3">
+        </div>
+        <div class="input-group">
+            <label for="bursts">Burst Times (ms)</label>
+            <input type="text" id="bursts" placeholder="e.g. 5,12,8" value="5,12,8">
+        </div>
+        <div class="input-group">
+            <label for="quantum">Time Quantum (ms)</label>
+            <input type="number" id="quantum" min="1" max="20" value="3">
+        </div>
+        <button onclick="startGame()">RUN SIMULATION</button>
+    </div>
+
+    <div class="main-grid">
+        <div class="left-panel">
+            <h2>Process Details</h2>
+            <div id="processCards"></div>
+        </div>
+        <div id="sidebar">
+            <div id="readyQueue">
+                <h3 style="color:var(--color-text-primary); margin-top:0;">READY QUEUE</h3>
+                <div id="queueList">Empty</div>
+            </div>
+            <div id="realTimeStats">
+                <div><span id="currentTime">0</span><small>Current Time (ms)</small></div>
+                <div><span id="avgWT">0.00</span><small>Avg. Waiting Time</small></div>
+                <div><span id="avgTAT">0.00</span><small>Avg. Turnaround Time</small></div>
+                <div><span id="completedCount">0</span><small>Completed Processes</small></div>
+            </div>
+        </div>
+    </div>
+
+    <h2>Gantt Chart</h2>
+    <div id="ganttChart">
+        <div id="ganttTimeline">
+            <div class="gantt-time start">0</div>
+        </div>
+    </div>
+
+    <h2>Activity Log</h2>
+    <div id="log"></div>
+
+    <div id="result"></div>
+</div>
+
+<script>
+const SIMULATION_SPEED_MS = 250; 
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/**
+ * Calculates the Time To Finish (TTF) for a specific process (P_idx) 
+ * by simulating the remaining schedule from the current readyQueue.
+ */
+function calculateTTF(processes, num, currentP_idx, tq, readyQueue) {
+    let ttf = 0;
+    let remBursts = processes.map(p => p.remaining); 
+    let queue = [...readyQueue]; 
+    let targetP = currentP_idx;
+
+    if (remBursts[targetP] <= 0) return 0;
+    
+    // Add the target process to the queue for simulation if it's the current runner
+    if (!queue.includes(targetP)) {
+        queue.unshift(targetP);
+    }
+    
+    let safety = 0;
+    while (remBursts[targetP] > 0 && safety < num * 10) {
+        if (queue.length === 0) break; 
+        
+        const i = queue.shift();
+        const runTime = Math.min(remBursts[i], tq);
+        
+        remBursts[i] -= runTime;
+        ttf += runTime;
+
+        if (i === targetP && remBursts[i] <= 0) {
+            return ttf;
+        }
+        
+        if (remBursts[i] > 0) {
+            queue.push(i);
+        }
+        safety++;
+    }
+    return 9999; 
+}
+
+
+/**
+ * Core Round Robin Simulation Function
+ */
+async function startGame() {
+    // 1. Reset and Setup
+    document.getElementById('log').innerHTML = "";
+    document.getElementById('result').innerHTML = "";
+    document.getElementById('ganttTimeline').innerHTML = `<div class="gantt-time start">0</div>`;
+    document.getElementById('queueList').innerHTML = "Empty";
+
+    const num = parseInt(document.getElementById('num').value);
+    const burstsInput = document.getElementById('bursts').value;
+    const bursts = burstsInput.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x) && x > 0);
+    const tq = parseInt(document.getElementById('quantum').value);
+
+    // Basic Validation
+    if (bursts.length !== num || num < 1 || tq < 1) {
+        alert("⚠️ Please check inputs. Ensure process count matches burst times and all values are positive.");
+        return;
+    }
+    
+    // Initialize Process State
+    let processes = bursts.map((b, i) => ({
+        id: "P" + (i + 1),
+        idx: i,
+        burst: b,
+        remaining: b,
+        waiting: 0,
+        turnaround: 0,
+        completionTime: 0,
+        lastRunTime: 0, 
+        firstRun: true
+    }));
+
+    // Initialize Scheduler State
+    let time = 0;
+    let done = 0;
+    let readyQueue = processes.map(p => p.idx); 
+    let ganttData = [];
+    
+    // 2. Initial UI Render
+    renderProcessCards(processes);
+    renderQueue(processes, readyQueue);
+    updateRealTimeStats(0, 0, 0, 0);
+
+    log(`<span style="color: var(--color-accent-purple);">[INIT]</span> Simulation Initialized. Quantum: **${tq}ms**`);
+
+    // 3. Scheduling Loop
+    while (done < num) {
+        if (readyQueue.length === 0) break;
+
+        const i = readyQueue.shift(); 
+        const p = processes[i];
+        const currentCard = document.getElementById(p.id);
+
+        if (p.remaining > 0) {
+            currentCard.classList.add("running");
+            
+            const runTime = Math.min(p.remaining, tq);
+            
+            // --- Waiting Time Calculation ---
+            if (!p.firstRun) {
+                p.waiting += (time - p.lastRunTime);
+            }
+            p.firstRun = false;
+
+            // Log & Queue Update
+            log(`<span style="color: var(--color-accent-cyan);">[${time}ms]</span> **${p.id}** dispatched for ${runTime}ms.`);
+            renderQueue(processes, readyQueue); 
+            
+            // Update TTF for all remaining processes
+            processes.forEach(proc => {
+                if (proc.remaining > 0) {
+                    const ttf = calculateTTF(processes, num, proc.idx, tq, readyQueue);
+                    document.getElementById(`${proc.id}-ttf`).textContent = `${ttf}ms`;
+                }
+            });
+
+            // --- Visualization (Running) ---
+            for (let t = 1; t <= runTime; t++) {
+                const remDisplay = p.remaining - t;
+                const currentTime = time + t;
+                
+                document.getElementById(`${p.id}-rem`).textContent = `${remDisplay}ms`;
+                updateRealTimeStats(currentTime, calculateAvgWT(processes, done), calculateAvgTAT(processes, done), done);
+                await sleep(SIMULATION_SPEED_MS);
+            }
+
+            // --- Update State and Advance Time ---
+            p.remaining -= runTime;
+            time += runTime;
+
+            // --- Gantt Chart Update ---
+            ganttData.push({ id: p.id, start: time - runTime, end: time });
+            renderGanttChart(ganttData, time);
+
+            currentCard.classList.remove("running");
+            p.lastRunTime = time; 
+
+            if (p.remaining === 0) {
+                // Process Completed
+                done++;
+                p.completionTime = time;
+                p.turnaround = p.completionTime; 
+                
+                log(`<span style="color: var(--color-status-completed);">[${time}ms]</span> **${p.id}** TERMINATED.`);
+                
+                currentCard.classList.add("completed");
+                document.getElementById(`${p.id}-rem`).textContent = "DONE";
+                document.getElementById(`${p.id}-ttf`).textContent = "0ms";
+                
+            } else {
+                // Preempted and re-queued
+                log(`<span style="color: var(--color-status-running);">[${time}ms]</span> Quantum Expired. **${p.id}** re-queued.`);
+                readyQueue.push(i); 
+            }
+            
+            // Update UI after state change
+            renderQueue(processes, readyQueue);
+        }
+    }
+
+    // 4. Final Cleanup and Result Display
+    processes.forEach(p => {
+        if (p.remaining > 0) document.getElementById(`${p.id}-ttf`).textContent = "INF";
+    });
+    
+    const finalAvgWT = calculateAvgWT(processes, done);
+    const finalAvgTAT = calculateAvgTAT(processes, done);
+
+    updateRealTimeStats(time, finalAvgWT, finalAvgTAT, done);
+    log("<br><span style='color: var(--color-accent-purple); font-weight: bold;'>[SYSTEM]</span> **SIMULATION COMPLETE. FINAL METRICS CALCULATED.**");
+    
+    displayResults(processes, num, finalAvgWT, finalAvgTAT);
+}
+
+// ----------------------------------------------------
+// UI RENDERING AND METRIC HELPER FUNCTIONS
+// ----------------------------------------------------
+
+function renderProcessCards(processes) {
+    const container = document.getElementById("processCards");
+    container.innerHTML = "";
+    processes.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "process-card";
+        div.id = p.id;
+        div.innerHTML = `
+            <div class="p-id">${p.id}</div>
+            <div class="p-metric">Burst Time: <span>${p.burst}ms</span></div>
+            <div class="p-metric">Remaining: <span id="${p.id}-rem">${p.remaining}ms</span></div>
+            <div class="p-metric">TTF: <span id="${p.id}-ttf">-</span></div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function renderQueue(processes, readyQueue) {
+    const list = document.getElementById('queueList');
+    if (readyQueue.length === 0) {
+        list.innerHTML = `<div style="color: var(--color-text-secondary); font-size: 0.9em; margin-top: 10px;">Queue is Empty</div>`;
+        return;
+    }
+    list.innerHTML = readyQueue.map(i => 
+        `<div class="queue-item">${processes[i].id}</div>`
+    ).join('');
+}
+
+function renderGanttChart(ganttData, time) {
+    const timeline = document.getElementById('ganttTimeline');
+    timeline.innerHTML = `<div class="gantt-time start">0</div>`; 
+    
+    const totalDuration = time; 
+
+    ganttData.forEach(block => {
+        const duration = block.end - block.start;
+        let width = totalDuration > 0 ? (duration / totalDuration) * 100 : 0;
+        
+        // Adjust for small blocks in large total duration
+        if (totalDuration > 50 && width < 2) {
+            width = 2; // Min width in percent to prevent disappearing
+        }
+
+        const div = document.createElement('div');
+        div.className = `gantt-block ${block.id}`;
+        div.style.width = `${width}%`;
+        
+        div.textContent = block.id;
+        div.innerHTML += `<div class="gantt-time">${block.end}</div>`;
+        
+        timeline.appendChild(div);
+    });
+    
+    // Ensure the timeline container scales horizontally for long simulations
+    if (totalDuration > 50) {
+        timeline.style.minWidth = `${totalDuration * 15}px`; 
+    } else {
+        timeline.style.minWidth = `100%`;
+    }
+}
+
+function updateRealTimeStats(time, avgWT, avgTAT, completed) {
+    document.getElementById('currentTime').textContent = time;
+    document.getElementById('avgWT').textContent = avgWT.toFixed(2);
+    document.getElementById('avgTAT').textContent = avgTAT.toFixed(2);
+    document.getElementById('completedCount').textContent = completed;
+}
+
+function calculateAvgWT(processes, numCompleted) {
+    if (numCompleted === 0) return 0;
+    const completedProcesses = processes.filter(p => p.completionTime > 0);
+    const totalWT = completedProcesses.reduce((sum, p) => sum + p.waiting, 0);
+    return totalWT / completedProcesses.length;
+}
+
+function calculateAvgTAT(processes, numCompleted) {
+    if (numCompleted === 0) return 0;
+    const completedProcesses = processes.filter(p => p.completionTime > 0);
+    const totalTAT = completedProcesses.reduce((sum, p) => sum + p.turnaround, 0);
+    return totalTAT / completedProcesses.length;
+}
+
+function displayResults(processes, num, avgWT, avgTAT) {
+    let html = `<h2>Final Metrics</h2><table>
+        <tr><th>Process</th><th>Burst (ms)</th><th>Waiting (ms)</th><th>Turnaround (ms)</th><th>Completion (ms)</th></tr>`;
+
+    processes.forEach(p => {
+        html += `<tr><td>${p.id}</td><td>${p.burst}</td><td>${p.waiting}</td><td>${p.turnaround}</td><td>${p.completionTime}</td></tr>`;
+    });
+    html += `</table>
+    <div class="summary">
+        <h3>Final Average Waiting Time: <span>${avgWT.toFixed(2)}ms</span></h3>
+        <h3>Final Average Turnaround Time: <span>${avgTAT.toFixed(2)}ms</span></h3>
+    </div>`;
+
+    document.getElementById("result").innerHTML = html;
+}
+
+function log(msg) {
+    const logBox = document.getElementById('log');
+    const formattedMsg = msg.replace(/\*\*(.*?)\*\*/g, '<span style="color: var(--color-text-primary);">$1</span>');
+    logBox.innerHTML += formattedMsg + "<br>";
+    logBox.scrollTop = logBox.scrollHeight;
+}
+</script>
+
+</body>
+</html>
