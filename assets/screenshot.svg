@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0%" stop-color="#171721"/>
+      <stop offset="100%" stop-color="#23232e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="600" fill="url(#g)" rx="12"/>
+  <text x="40" y="60" fill="#00bcd4" font-family="Montserrat, Arial" font-size="28" font-weight="700">Round Robin Scheduler — Demo</text>
+  <g transform="translate(40,100)">
+    <rect x="0" y="0" width="520" height="120" rx="8" fill="#23232e"/>
+    <text x="16" y="36" fill="#e3e6e8" font-family="Fira Code, monospace" font-size="16">Controls: Processes, Burst Times, Quantum</text>
+
+    <rect x="0" y="140" width="520" height="320" rx="8" fill="#171721"/>
+    <text x="16" y="176" fill="#e3e6e8" font-family="Fira Code, monospace" font-size="14">Process cards, ready queue, and activity log are shown here.</text>
+  </g>
+
+  <g transform="translate(600,120)">
+    <rect x="0" y="0" width="560" height="80" rx="8" fill="#23232e"/>
+    <text x="16" y="36" fill="#e3e6e8" font-family="Fira Code, monospace" font-size="14">Gantt chart timeline (visualized blocks for each execution slice)</text>
+  </g>
+
+  <g transform="translate(600,220)">
+    <rect x="0" y="0" width="560" height="240" rx="8" fill="#171721"/>
+    <text x="16" y="36" fill="#a0a8b4" font-family="Fira Code, monospace" font-size="12">This is a placeholder screenshot generated locally.</text>
+  </g>
+</svg>
