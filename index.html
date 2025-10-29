@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Round Robin Scheduler — Demo</title>
+    <style>
+        /* Minimal styles to ensure demo looks fine when opened locally */
+        body { font-family: Arial, sans-serif; background:#0a0a0f; color:#e3e6e8; padding:20px; }
+        .app-container { max-width:1000px; margin:0 auto; padding:20px; background:#171721; border-radius:12px; }
+        button{padding:10px 16px;border-radius:6px;background:#8e24aa;color:white;border:none;cursor:pointer}
+        input{padding:6px;border-radius:6px;border:none}
+        .process-card{background:#23232e;padding:10px;margin:6px;border-radius:8px}
+        #ganttTimeline{display:flex;height:60px;background:#23232e;border-radius:8px;overflow:auto}
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <h1>ROUND ROBIN SCHEDULER: DEMO</h1>
+
+    <div class="control-panel">
+        <label>Processes Count <input type="number" id="num" min="1" max="10" value="3"></label>
+        <label>Burst Times (ms) <input type="text" id="bursts" value="5,12,8"></label>
+        <label>Time Quantum (ms) <input type="number" id="quantum" min="1" max="20" value="3"></label>
+        <button onclick="startGame()">RUN SIMULATION</button>
+    </div>
+
+    <h2>Process Details</h2>
+    <div id="processCards"></div>
+
+    <h2>Gantt Chart</h2>
+    <div id="ganttChart"><div id="ganttTimeline"><div class="gantt-time start">0</div></div></div>
+
+    <h2>Activity Log</h2>
+    <div id="log" style="background:#000;padding:10px;border-radius:6px;min-height:120px;max-height:220px;overflow:auto;font-family:monospace"></div>
+</div>
+
+<script>
+const SIMULATION_SPEED_MS = 150;
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+function startGame(){
+    document.getElementById('log').innerHTML='';
+    const num = parseInt(document.getElementById('num').value);
+    const bursts = document.getElementById('bursts').value.split(',').map(x=>parseInt(x.trim())).filter(x=>!isNaN(x) && x>0);
+    const tq = parseInt(document.getElementById('quantum').value);
+    if(bursts.length!==num){ alert('Process count and bursts length mismatch'); return }
+    let processes = bursts.map((b,i)=>({id:'P'+(i+1),idx:i,burst:b,remaining:b,waiting:0,turnaround:0,completionTime:0,lastRunTime:0,firstRun:true}));
+    let time=0; let done=0; let readyQueue = processes.map(p=>p.idx); let ganttData=[];
+    renderProcessCards(processes);
+    (async()=>{
+        while(done < num){
+            if(readyQueue.length===0) break;
+            const i = readyQueue.shift(); const p = processes[i];
+            if(p.remaining>0){
+                const runTime = Math.min(p.remaining,tq);
+                if(!p.firstRun){ p.waiting += (time - p.lastRunTime); }
+                p.firstRun=false;
+                log(`[${time}ms] ${p.id} dispatched for ${runTime}ms.`);
+                for(let t=1;t<=runTime;t++){
+                    document.getElementById(`${p.id}-rem`).textContent = `${p.remaining - t}ms`;
+                    await sleep(SIMULATION_SPEED_MS);
+                }
+                p.remaining -= runTime; time += runTime; ganttData.push({id:p.id,start:time-runTime,end:time}); renderGanttChart(ganttData,time);
+                p.lastRunTime = time;
+                if(p.remaining===0){ done++; p.completionTime=time; p.turnaround = p.completionTime; document.getElementById(`${p.id}-rem`).textContent='DONE'; log(`[${time}ms] ${p.id} TERMINATED.`)} else { readyQueue.push(i); log(`[${time}ms] Quantum expired. ${p.id} re-queued.`) }
+            }
+        }
+        log('SIMULATION COMPLETE');
+    })();
+}
+
+function renderProcessCards(processes){const c=document.getElementById('processCards'); c.innerHTML=''; processes.forEach(p=>{const d=document.createElement('div'); d.className='process-card'; d.id=p.id; d.innerHTML=`<div><strong>${p.id}</strong></div><div>Burst: ${p.burst}ms</div><div>Remaining: <span id="${p.id}-rem">${p.remaining}ms</span></div>`; c.appendChild(d)})}
+
+function renderGanttChart(ganttData,time){const timeline=document.getElementById('ganttTimeline'); timeline.innerHTML=`<div class="gantt-time start">0</div>`; const total = time||1; ganttData.forEach(b=>{const dur=b.end-b.start; const width = Math.max((dur/total)*100, 2); const div=document.createElement('div'); div.className='gantt-block'; div.style.width = width + '%'; div.style.background='#6a1b9a'; div.style.display='flex'; div.style.alignItems='center'; div.style.justifyContent='center'; div.style.fontFamily='monospace'; div.style.fontWeight='700'; div.textContent = b.id; timeline.appendChild(div)})}
+
+function log(msg){const box=document.getElementById('log'); box.innerHTML += msg + '<br>'; box.scrollTop = box.scrollHeight}
+</script>
+</body>
+</html>
